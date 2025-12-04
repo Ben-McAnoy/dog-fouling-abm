@@ -1,3 +1,5 @@
+# Dog Fouling & Toxocara ABM (Ben McAnoy)
+# Script 3/3. Requires: tidyverse, ggplot2, spatstat 
 
 source("main-loop.R") # runs the sim
 

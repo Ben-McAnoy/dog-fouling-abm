@@ -1,5 +1,5 @@
 # Dog Fouling & Toxocara ABM (Ben McAnoy)
-# Single-file script. Requires: tidyverse, ggplot2, spatstat 
+# Script 2/3. Requires: tidyverse, ggplot2, spatstat 
 
 library(tidyverse)
 library(ggplot2)
@@ -17,6 +17,7 @@ N_daily <- 200 # number of dog-owner pairs entering per day
 prop_infected <- 0.15 # proportion of dogs shedding eggs
 degradation_time <- 7 # faeces visual degradation time (days)
 burn_in <- 10 # days to run before collecting (0 = none)
+rho_cleanup_infection <- -0.6 # correlation i.e. responsible owners are less likely to have infected dogs
 
 # Fouling probability parameters
 entrance_lambda <- 0.03 # exponential decay rate with distance from entrance
@@ -93,9 +94,9 @@ points(path_cells$x, path_cells$y, pch = 16, cex = 0.3) # individual points
 
 
 # bins/disposal points (a few near entrances and central)
-bins <- tibble(id = 1:5,
-               x = c(2, GRID_SIZE-1, center-3, center+4, center),
-               y = c(center, center, 2, GRID_SIZE-1, center+6))
+# bins <- tibble(id = 1:5,
+#                x = c(2, GRID_SIZE-1, center-3, center+4, center),
+#                y = c(center, center, 2, GRID_SIZE-1, center+6))
 
 # mark path distance raster (distance from nearest path cell)
 # precompute distance from path for every cell
@@ -157,6 +158,15 @@ next_faeces_id <- 1L
 
 for(day in 1:SIM_DAYS) {
   # 1. Agent entry: generate N_daily dog-owner pairs
+  
+  # generate correlated attributes (for the infection and cleanup probs.)
+  traits <- draw_correlated_attributes(
+    n = N_daily, 
+    cleanup_dist = cleanup_probs, 
+    infection_prob = prop_infected, 
+    rho = rho_cleanup_infection
+  )
+  
   dogs <- tibble(
     dog_id = 1:N_daily,
     entry_id = sample(entrances$id, N_daily, replace = TRUE),
@@ -202,7 +212,7 @@ for(day in 1:SIM_DAYS) {
     # Create faeces deposit (owner may clean up)
     # modify cleanup propensity if near bin
     cleanup_p <- d$cleanup_propensity
-    if (is_within_bin_radius(fx, fy, bin_radius)) cleanup_p <- min(1, cleanup_p + 0.15) # bins increase cleanup prob
+    # if (is_within_bin_radius(fx, fy, bin_radius)) cleanup_p <- min(1, cleanup_p + 0.15) # bins increase cleanup prob
     
     cleaned <- runif(1) < cleanup_p
     if(cleaned) {
